@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>專業貸款還款計算機</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for table */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background: white !important;
+            }
+            .print-full-width {
+                width: 100% !important;
+                max-width: none !important;
+                box-shadow: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="h-full text-slate-800 antialiased font-sans">
+    <div class="min-h-full flex flex-col">
+        <!-- Top Navigation Bar -->
+        <header class="bg-white border-b border-slate-200 sticky top-0 z-30 no-print">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16 items-center">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-brand-600 text-white p-2.5 rounded-xl shadow-md shadow-brand-500/20">
+                            <i class="fa-solid fa-calculator text-xl"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-bold text-slate-900 leading-tight">貸款還款計算機</h1>
+                            <p class="text-xs text-slate-500">精準試算房貸、信貸、車貸還款計畫</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="window.print()" class="inline-flex items-center px-3.5 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-colors">
+                            <i class="fa-solid fa-print mr-2 text-slate-500"></i> 列印報告
+                        </button>
+                        <button onclick="exportToCSV()" class="inline-flex items-center px-3.5 py-2 border border-brand-600 text-sm font-medium rounded-lg text-brand-600 bg-brand-50 hover:bg-brand-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-colors">
+                            <i class="fa-solid fa-file-csv mr-2"></i> 匯出 CSV
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                <!-- Left Input Panel (5 columns) -->
+                <div class="lg:col-span-5 space-y-6 no-print">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                            <h2 class="text-lg font-semibold text-slate-900 flex items-center">
+                                <i class="fa-solid fa-sliders text-brand-600 mr-2.5"></i>計算條件設定
+                            </h2>
+                            <button onclick="resetCalculator()" class="text-xs font-medium text-slate-400 hover:text-brand-600 transition-colors flex items-center">
+                                <i class="fa-solid fa-rotate-right mr-1"></i>重置
+                            </button>
+                        </div>
+
+                        <!-- 1. Loan Amount -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center">
+                                <label for="loanAmount" class="block text-sm font-medium text-slate-700">借款金額 (萬 NTD)</label>
+                                <span class="text-xs text-slate-500" id="loanAmountFormatted">NT$ 10,000,000</span>
+                            </div>
+                            <div class="relative rounded-md shadow-sm">
+                                <input type="number" id="loanAmount" value="1000" min="1" max="100000" step="10" 
+                                    class="block w-full pr-12 text-slate-900 font-semibold text-lg border-slate-300 rounded-lg focus:ring-brand-500 focus:border-brand-500 p-2.5 border"
+                                    oninput="calculateLoan()">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <span class="text-slate-500 text-sm font-medium">萬元</span>
+                                </div>
+                            </div>
+                            <!-- Quick Buttons -->
+                            <div class="flex flex-wrap gap-1.5 pt-1">
+                                <button type="button" onclick="adjustAmount(10)" class="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-colors">+10萬</button>
+                                <button type="button" onclick="adjustAmount(50)" class="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-colors">+50萬</button>
+                                <button type="button" onclick="adjustAmount(100)" class="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-colors">+100萬</button>
+                                <button type="button" onclick="adjustAmount(500)" class="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-colors">+500萬</button>
+                            </div>
+                        </div>
+
+                        <!-- 2. Annual Interest Rate -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center">
+                                <label for="interestRate" class="block text-sm font-medium text-slate-700">年利率 (%)</label>
+                            </div>
+                            <div class="relative rounded-md shadow-sm">
+                                <input type="number" id="interestRate" value="2.185" min="0.1" max="30" step="0.01" 
+                                    class="block w-full pr-10 text-slate-900 font-semibold text-lg border-slate-300 rounded-lg focus:ring-brand-500 focus:border-brand-500 p-2.5 border"
+                                    oninput="calculateLoan()">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <span class="text-slate-500 text-sm font-medium">%</span>
+                                </div>
+                            </div>
+                            <!-- Rate Presets -->
+                            <div class="flex flex-wrap gap-1.5 pt-1">
+                                <button type="button" onclick="setPresetRate(2.185)" class="px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors">新青安/首購 2.185%</button>
+                                <button type="button" onclick="setPresetRate(2.5)" class="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-colors">一般房貸 2.5%</button>
+                                <button type="button" onclick="setPresetRate(3.5)" class="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-colors">信貸 3.5%</button>
+                                <button type="button" onclick="setPresetRate(5.0)" class="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-colors">車貸 5%</button>
+                            </div>
+                        </div>
+
+                        <!-- 3. Loan Term -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center">
+                                <label for="loanTerm" class="block text-sm font-medium text-slate-700">還款期數 / 年限</label>
+                                <div class="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-100">
+                                    <button type="button" id="termUnitYear" onclick="setTermUnit('year')" class="px-2.5 py-0.5 text-xs font-medium rounded-md bg-white text-slate-800 shadow-sm">年</button>
+                                    <button type="button" id="termUnitMonth" onclick="setTermUnit('month')" class="px-2.5 py-0.5 text-xs font-medium rounded-md text-slate-500 hover:text-slate-800">月</button>
+                                </div>
+                            </div>
+                            <div class="relative rounded-md shadow-sm">
+                                <input type="number" id="loanTerm" value="30" min="1" max="50" step="1" 
+                                    class="block w-full pr-12 text-slate-900 font-semibold text-lg border-slate-300 rounded-lg focus:ring-brand-500 focus:border-brand-500 p-2.5 border"
+                                    oninput="calculateLoan()">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <span id="termUnitText" class="text-slate-500 text-sm font-medium">年</span>
+                                </div>
+                            </div>
+                            <!-- Term Presets -->
+                            <div class="flex flex-wrap gap-1.5 pt-1">
+                                <button type="button" onclick="setPresetTerm(7)" class="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-colors">7年 (車貸/信貸)</button>
+                                <button type="button" onclick="setPresetTerm(20)" class="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-colors">20年</button>
+                                <button type="button" onclick="setPresetTerm(30)" class="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-colors">30年</button>
+                                <button type="button" onclick="setPresetTerm(40)" class="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-colors">40年</button>
+                            </div>
+                        </div>
+
+                        <!-- 4. Repayment Method -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium text-slate-700">還款方式</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <label class="relative flex flex-col p-3 border rounded-xl cursor-pointer focus:outline-none transition-all duration-200 border-brand-500 bg-brand-50/40 ring-2 ring-brand-500/20" id="methodLabelCPM">
+                                    <input type="radio" name="repaymentMethod" value="CPM" checked class="sr-only" onchange="onMethodChange()">
+                                    <span class="text-sm font-semibold text-slate-900">本息平均攤還</span>
+                                    <span class="text-xs text-slate-500 mt-0.5">每月繳款金額固定</span>
+                                </label>
+                                <label class="relative flex flex-col p-3 border rounded-xl cursor-pointer focus:outline-none transition-all duration-200 border-slate-200 hover:border-slate-300" id="methodLabelCAM">
+                                    <input type="radio" name="repaymentMethod" value="CAM" class="sr-only" onchange="onMethodChange()">
+                                    <span class="text-sm font-semibold text-slate-900">本金平均攤還</span>
+                                    <span class="text-xs text-slate-500 mt-0.5">前期較重，總利息較省</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 5. Grace Period -->
+                        <div class="space-y-2 pt-2 border-t border-slate-100">
+                            <div class="flex justify-between items-center">
+                                <label for="gracePeriod" class="block text-sm font-medium text-slate-700 flex items-center">
+                                    寬限期 (只繳利息)
+                                    <span class="ml-1 text-slate-400 hover:text-slate-600 cursor-pointer" title="寬限期內每月僅需繳納利息，暫不還本金。">
+                                        <i class="fa-regular fa-circle-question text-xs"></i>
+                                    </span>
+                                </label>
+                                <span class="text-xs font-semibold text-brand-600" id="gracePeriodDisplay">0 個月</span>
+                            </div>
+                            <input type="range" id="gracePeriod" min="0" max="60" value="0" step="1" 
+                                class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-600"
+                                oninput="onGracePeriodInput()">
+                            <div class="flex justify-between text-[11px] text-slate-400">
+                                <span>無寬限期</span>
+                                <span>1年</span>
+                                <span>3年</span>
+                                <span>5年</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Right Summary & Visualizations Panel (7 columns) -->
+                <div class="lg:col-span-7 space-y-6">
+                    
+                    <!-- Highlight KPI Card -->
+                    <div class="bg-gradient-to-br from-brand-600 to-brand-800 rounded-2xl p-6 text-white shadow-xl shadow-brand-500/10 relative overflow-hidden print-full-width">
+                        <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
+                        
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <span class="text-brand-100 text-xs font-medium tracking-wider uppercase">每月還款金額估計</span>
+                                <h3 class="text-3xl sm:text-4xl font-extrabold tracking-tight mt-1" id="kpiMonthlyPayment">
+                                    NT$ 0
+                                </h3>
+                            </div>
+                            <span class="bg-white/10 backdrop-blur-md text-brand-50 text-xs font-medium px-3 py-1 rounded-full border border-white/10" id="kpiMethodBadge">
+                                本息平均攤還
+                            </span>
+                        </div>
+
+                        <!-- Dynamic notice for CAM or Grace period -->
+                        <div id="kpiSubNotice" class="text-xs text-brand-100 bg-white/10 rounded-lg p-2.5 backdrop-blur-sm flex items-center space-x-2">
+                            <i class="fa-solid fa-circle-info text-brand-200"></i>
+                            <span id="kpiSubNoticeText">每月還款金額固定 (含本金與利息)</span>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-white/15 text-center sm:text-left">
+                            <div>
+                                <div class="text-brand-200 text-xs">貸款總額</div>
+                                <div class="text-base sm:text-lg font-bold mt-0.5" id="kpiTotalPrincipal">NT$ 0</div>
+                            </div>
+                            <div>
+                                <div class="text-brand-200 text-xs">應繳總利息</div>
+                                <div class="text-base sm:text-lg font-bold text-amber-300 mt-0.5" id="kpiTotalInterest">NT$ 0</div>
+                            </div>
+                            <div>
+                                <div class="text-brand-200 text-xs">本息合計</div>
+                                <div class="text-base sm:text-lg font-bold mt-0.5" id="kpiTotalPaid">NT$ 0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visual Charts Section -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+                        <h3 class="text-base font-semibold text-slate-900 flex items-center">
+                            <i class="fa-solid fa-chart-pie text-brand-600 mr-2"></i>分析與視覺圖表
+                        </h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                            <!-- Doughnut Chart (Principal vs Interest) -->
+                            <div class="md:col-span-5 flex flex-col items-center justify-center p-2">
+                                <div class="w-44 h-44 relative">
+                                    <canvas id="ratioChart"></canvas>
+                                </div>
+                                <div class="text-center mt-3">
+                                    <span class="text-xs font-medium text-slate-500">利息佔總支出</span>
+                                    <div class="text-lg font-bold text-slate-800" id="interestRatioText">0%</div>
+                                </div>
+                            </div>
+
+                            <!-- Bar/Line Trend Chart -->
+                            <div class="md:col-span-7 h-52">
+                                <canvas id="trendChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Explanation Info Box -->
+                    <div class="bg-slate-100 rounded-xl p-4 text-xs text-slate-600 space-y-1.5 no-print">
+                        <div class="font-semibold text-slate-700 flex items-center text-sm mb-1">
+                            <i class="fa-solid fa-lightbulb text-amber-500 mr-1.5"></i>攤還方式差異說明
+                        </div>
+                        <p><strong>• 本息平均攤還法：</strong>將本息合計算出每月固定繳交金額。前期利息比重較高、本金較少；優點是每月負擔固定，便於財務規劃。</p>
+                        <p><strong>• 本金平均攤還法：</strong>將本金平均分攤在各期，利息則依剩餘本金計算。前期還款金額較高，隨時間遞減；總結算利息支出較少。</p>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Full Amortization Schedule Table -->
+            <div class="mt-10 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-slate-900 flex items-center">
+                            <i class="fa-solid fa-table-list text-brand-600 mr-2.5"></i>分期還款明細表
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-0.5">完整檢視每一期的本金、利息與累積還款金額</p>
+                    </div>
+
+                    <div class="flex items-center space-x-3 no-print">
+                        <div class="relative">
+                            <input type="text" id="tableSearch" placeholder="搜尋期數 (例: 12)" 
+                                class="text-xs border border-slate-300 rounded-lg pl-8 pr-3 py-2 focus:ring-brand-500 focus:border-brand-500"
+                                onkeyup="filterTable()">
+                            <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table Container -->
+                <div class="overflow-x-auto max-h-[500px] overflow-y-auto relative">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead class="bg-slate-50 text-slate-600 text-xs font-semibold uppercase tracking-wider sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                <th class="py-3 px-4 border-b border-slate-200">期數</th>
+                                <th class="py-3 px-4 border-b border-slate-200">每月應繳金額</th>
+                                <th class="py-3 px-4 border-b border-slate-200">償還本金</th>
+                                <th class="py-3 px-4 border-b border-slate-200">支付利息</th>
+                                <th class="py-3 px-4 border-b border-slate-200">剩餘本金</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scheduleTableBody" class="divide-y divide-slate-100 text-slate-700">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // State variables
+        let termUnit = 'year'; // 'year' or 'month'
+        let ratioChartInstance = null;
+        let trendChartInstance = null;
+        let scheduleData = [];
+
+        // DOM Loaded Init
+        window.onload = function() {
+            initCharts();
+            calculateLoan();
+        };
+
+        // Utility: Format currency
+        function formatCurrency(val) {
+            return 'NT$ ' + Math.round(val).toLocaleString('zh-TW');
+        }
+
+        // Adjust Loan Amount with quick buttons
+        function adjustAmount(delta) {
+            const input = document.getElementById('loanAmount');
+            let current = parseFloat(input.value) || 0;
+            current = Math.max(1, current + delta);
+            input.value = current;
+            calculateLoan();
+        }
+
+        // Preset Rate
+        function setPresetRate(rate) {
+            document.getElementById('interestRate').value = rate;
+            calculateLoan();
+        }
+
+        // Preset Term
+        function setPresetTerm(years) {
+            setTermUnit('year');
+            document.getElementById('loanTerm').value = years;
+            calculateLoan();
+        }
+
+        // Toggle Term Unit
+        function setTermUnit(unit) {
+            termUnit = unit;
+            const btnYear = document.getElementById('termUnitYear');
+            const btnMonth = document.getElementById('termUnitMonth');
+            const unitText = document.getElementById('termUnitText');
+
+            if (unit === 'year') {
+                btnYear.className = "px-2.5 py-0.5 text-xs font-medium rounded-md bg-white text-slate-800 shadow-sm";
+                btnMonth.className = "px-2.5 py-0.5 text-xs font-medium rounded-md text-slate-500 hover:text-slate-800";
+                unitText.innerText = "年";
+            } else {
+                btnMonth.className = "px-2.5 py-0.5 text-xs font-medium rounded-md bg-white text-slate-800 shadow-sm";
+                btnYear.className = "px-2.5 py-0.5 text-xs font-medium rounded-md text-slate-500 hover:text-slate-800";
+                unitText.innerText = "月";
+            }
+            calculateLoan();
+        }
+
+        // Repayment Method Switch Styling
+        function onMethodChange() {
+            const method = document.querySelector('input[name="repaymentMethod"]:checked').value;
+            const labelCPM = document.getElementById('methodLabelCPM');
+            const labelCAM = document.getElementById('methodLabelCAM');
+
+            if (method === 'CPM') {
+                labelCPM.className = "relative flex flex-col p-3 border rounded-xl cursor-pointer focus:outline-none transition-all duration-200 border-brand-500 bg-brand-50/40 ring-2 ring-brand-500/20";
+                labelCAM.className = "relative flex flex-col p-3 border rounded-xl cursor-pointer focus:outline-none transition-all duration-200 border-slate-200 hover:border-slate-300";
+            } else {
+                labelCAM.className = "relative flex flex-col p-3 border rounded-xl cursor-pointer focus:outline-none transition-all duration-200 border-brand-500 bg-brand-50/40 ring-2 ring-brand-500/20";
+                labelCPM.className = "relative flex flex-col p-3 border rounded-xl cursor-pointer focus:outline-none transition-all duration-200 border-slate-200 hover:border-slate-300";
+            }
+            calculateLoan();
+        }
+
+        // Grace Period Slider
+        function onGracePeriodInput() {
+            const val = document.getElementById('gracePeriod').value;
+            document.getElementById('gracePeriodDisplay').innerText = val + " 個月";
+            calculateLoan();
+        }
+
+        // Reset Calculator
+        function resetCalculator() {
+            document.getElementById('loanAmount').value = 1000;
+            document.getElementById('interestRate').value = 2.185;
+            document.getElementById('loanTerm').value = 30;
+            document.getElementById('gracePeriod').value = 0;
+            document.getElementById('gracePeriodDisplay').innerText = "0 個月";
+            document.querySelector('input[name="repaymentMethod"][value="CPM"]').checked = true;
+            setTermUnit('year');
+            onMethodChange();
+        }
+
+        function calculateLoan() {
+            // Retrieve Inputs
+            const amountTenThousand = parseFloat(document.getElementById('loanAmount').value) || 0;
+            const principal = amountTenThousand * 10000; // Convert to TWD
+            const annualRate = parseFloat(document.getElementById('interestRate').value) || 0;
+            const termInput = parseFloat(document.getElementById('loanTerm').value) || 0;
+            const totalMonths = termUnit === 'year' ? Math.round(termInput * 12) : Math.round(termInput);
+            const gracePeriodMonths = parseInt(document.getElementById('gracePeriod').value) || 0;
+            const method = document.querySelector('input[name="repaymentMethod"]:checked').value;
+
+            // Format Amount Display
+            document.getElementById('loanAmountFormatted').innerText = formatCurrency(principal);
+
+            if (principal <= 0 || totalMonths <= 0) {
+                return;
+            }
+
+            const monthlyRate = (annualRate / 100) / 12;
+            scheduleData = [];
+
+            let remainingBalance = principal;
+            let totalInterest = 0;
+            let firstMonthPayment = 0;
+            let lastMonthPayment = 0;
+
+            const regularMonths = Math.max(1, totalMonths - gracePeriodMonths);
+            const fixedPrincipalPerMonth = remainingBalance / regularMonths;
+
+            for (let m = 1; m <= totalMonths; m++) {
+                let interestForMonth = remainingBalance * monthlyRate;
+                let principalForMonth = 0;
+                let paymentForMonth = 0;
+
+                if (m <= gracePeriodMonths) {
+                    // Grace Period: Interest only
+                    principalForMonth = 0;
+                    paymentForMonth = interestForMonth;
+                } else {
+                    if (method === 'CPM') {
+                        // Equal Monthly Payment (Principal + Interest)
+                        if (monthlyRate === 0) {
+                            paymentForMonth = remainingBalance / (totalMonths - m + 1);
+                            principalForMonth = paymentForMonth;
+                        } else {
+                            // Formula: P * [i(1+i)^n] / [(1+i)^n - 1]
+                            const n = totalMonths - gracePeriodMonths;
+                            paymentForMonth = principal * (monthlyRate * Math.pow(1 + monthlyRate, n)) / (Math.pow(1 + monthlyRate, n) - 1);
+                            principalForMonth = paymentForMonth - interestForMonth;
+                        }
+                    } else {
+                        // Equal Principal Repayment
+                        principalForMonth = fixedPrincipalPerMonth;
+                        paymentForMonth = principalForMonth + interestForMonth;
+                    }
+                }
+
+                // Adjust for last month rounding errors
+                if (m === totalMonths) {
+                    principalForMonth = remainingBalance;
+                    paymentForMonth = principalForMonth + interestForMonth;
+                    remainingBalance = 0;
+                } else {
+                    remainingBalance -= principalForMonth;
+                }
+
+                totalInterest += interestForMonth;
+
+                if (m === 1) firstMonthPayment = paymentForMonth;
+                if (m === totalMonths) lastMonthPayment = paymentForMonth;
+
+                scheduleData.push({
+                    period: m,
+                    payment: paymentForMonth,
+                    principal: principalForMonth,
+                    interest: interestForMonth,
+                    remaining: Math.max(0, remainingBalance)
+                });
+            }
+
+            const totalPaid = principal + totalInterest;
+
+            // Update KPI Displays
+            document.getElementById('kpiTotalPrincipal').innerText = formatCurrency(principal);
+            document.getElementById('kpiTotalInterest').innerText = formatCurrency(totalInterest);
+            document.getElementById('kpiTotalPaid').innerText = formatCurrency(totalPaid);
+
+            // Update Main Monthly Payment KPI Card
+            if (gracePeriodMonths > 0) {
+                const gracePayment = scheduleData[0].payment;
+                const postGracePayment = scheduleData[gracePeriodMonths]?.payment || 0;
+                document.getElementById('kpiMonthlyPayment').innerText = formatCurrency(gracePayment);
+                document.getElementById('kpiMethodBadge').innerText = "含寬限期 " + gracePeriodMonths + " 個月";
+                document.getElementById('kpiSubNoticeText').innerText = `寬限期內月繳 ${formatCurrency(gracePayment)}，第 ${gracePeriodMonths + 1} 期起月繳約 ${formatCurrency(postGracePayment)}`;
+            } else if (method === 'CAM') {
+                document.getElementById('kpiMonthlyPayment').innerText = formatCurrency(firstMonthPayment);
+                document.getElementById('kpiMethodBadge').innerText = "本金平均攤還";
+                document.getElementById('kpiSubNoticeText').innerText = `首期金額 ${formatCurrency(firstMonthPayment)}，逐月遞減至末期 ${formatCurrency(lastMonthPayment)}`;
+            } else {
+                document.getElementById('kpiMonthlyPayment').innerText = formatCurrency(firstMonthPayment);
+                document.getElementById('kpiMethodBadge').innerText = "本息平均攤還";
+                document.getElementById('kpiSubNoticeText').innerText = "每月還款金額固定 (含本金與利息)";
+            }
+
+            // Ratio calculation
+            const interestRatio = ((totalInterest / totalPaid) * 100).toFixed(1);
+            document.getElementById('interestRatioText').innerText = interestRatio + '%';
+
+            // Render Amortization Schedule Table
+            renderTable(scheduleData);
+
+            // Update Charts
+            updateCharts(principal, totalInterest, scheduleData);
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('scheduleTableBody');
+            tbody.innerHTML = '';
+
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = row.period % 2 === 0 ? 'bg-slate-50/50 hover:bg-slate-100/60 transition-colors' : 'bg-white hover:bg-slate-100/60 transition-colors';
+                
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-medium text-slate-900">第 ${row.period} 期</td>
+                    <td class="py-3 px-4 font-semibold text-slate-800">${formatCurrency(row.payment)}</td>
+                    <td class="py-3 px-4 text-emerald-600">${formatCurrency(row.principal)}</td>
+                    <td class="py-3 px-4 text-amber-600">${formatCurrency(row.interest)}</td>
+                    <td class="py-3 px-4 text-slate-500">${formatCurrency(row.remaining)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Filter Table Search
+        function filterTable() {
+            const query = document.getElementById('tableSearch').value.trim();
+            const rows = document.querySelectorAll('#scheduleTableBody tr');
+            
+            rows.forEach(row => {
+                const periodText = row.children[0].innerText;
+                if (!query || periodText.includes(query)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function initCharts() {
+            // 1. Doughnut Ratio Chart
+            const ctxRatio = document.getElementById('ratioChart').getContext('2d');
+            ratioChartInstance = new Chart(ctxRatio, {
+                type: 'doughnut',
+                data: {
+                    labels: ['貸款本金', '總利息'],
+                    datasets: [{
+                        data: [70, 30],
+                        backgroundColor: ['#3b82f6', '#f59e0b'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ' ' + context.label + ': ' + formatCurrency(context.raw);
+                                }
+                            }
+                        }
+                    },
+                    cutout: '75%'
+                }
+            });
+
+            // 2. Trend Line Chart
+            const ctxTrend = document.getElementById('trendChart').getContext('2d');
+            trendChartInstance = new Chart(ctxTrend, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: '剩餘本金',
+                        data: [],
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        fill: true,
+                        tension: 0.1,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: { boxWidth: 12, font: { size: 11 } }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return ' ' + context.dataset.label + ': ' + formatCurrency(context.raw);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { maxTicksLimit: 8, font: { size: 10 } }
+                        },
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + (value / 10000) + '萬';
+                                },
+                                font: { size: 10 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateCharts(principal, totalInterest, schedule) {
